@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supply Chain Blockchain</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white; height: 100vh; }
+        .hero-card { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); border-radius: 20px; padding: 40px; border: 1px solid rgba(255, 255, 255, 0.2); }
+        .status-dot { height: 15px; width: 15px; background-color: #bbb; border-radius: 50%; display: inline-block; }
+        .status-active { background-color: #00ff88; box-shadow: 0 0 10px #00ff88; }
+    </style>
+</head>
+<body class="d-flex align-items-center justify-content-center">
+
+    <div class="container text-center">
+        <div class="hero-card shadow-lg">
+            <h1 class="display-4 fw-bold mb-4">🔗 Universal Supply Chain</h1>
+            <p class="lead mb-4">Blockchain-Powered Transparency & AI-Driven Insights</p>
+            
+            <div class="mb-4">
+                <span id="status-dot" class="status-dot"></span>
+                <span id="server-status" class="ms-2">Connecting to Server...</span>
+            </div>
+
+            <div class="d-grid gap-3 d-sm-flex justify-content-center">
+                <a href="login.html" class="btn btn-light btn-lg px-4 gap-3">Login</a>
+                <a href="register.html" class="btn btn-outline-light btn-lg px-4">Register</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Check if Backend is alive
+        fetch('http://127.0.0.1:5001/')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('server-status').innerText = "System Online: " + data.status;
+                document.getElementById('status-dot').classList.add('status-active');
+            })
+            .catch(error => {
+                document.getElementById('server-status').innerText = "Server Offline (Check Python Console)";
+                document.getElementById('server-status').style.color = "#ff6b6b";
+            });
+    </script>
+</body>
+</html>

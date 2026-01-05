@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Supply Chain</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; }
+        .sidebar { height: 100vh; width: 250px; position: fixed; top: 0; left: 0; background-color: #343a40; padding-top: 20px; color: white; }
+        .sidebar a { padding: 15px; text-decoration: none; font-size: 18px; color: #ddd; display: block; }
+        .sidebar a:hover { background-color: #495057; color: white; }
+        .content { margin-left: 260px; padding: 20px; }
+        .card-product { border: none; border-radius: 10px; transition: transform 0.2s; }
+        .card-product:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+        .timeline-item { border-left: 2px solid #0d6efd; padding-left: 20px; margin-bottom: 20px; position: relative; }
+        .timeline-item::before { content: ''; width: 12px; height: 12px; background: #0d6efd; border-radius: 50%; position: absolute; left: -7px; top: 0; }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <h3 class="text-center mb-4">📦 SCM</h3>
+        <a href="#">🏠 Dashboard</a>
+        <a href="#" data-bs-toggle="modal" data-bs-target="#addProductModal">➕ Create Product</a>
+        <a href="index.html" class="text-danger mt-5">🚪 Logout</a>
+    </div>
+
+    <div class="content">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>My Products</h2>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addProductModal">
+                + New Product
+            </button>
+        </div>
+        
+        <p class="text-muted">Welcome, <span id="username-display" class="fw-bold">User</span></p>
+        <div id="product-list" class="row"></div>
+    </div>
+
+    <div class="modal fade" id="addProductModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add New Product</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="createProductForm">
+                        <div class="mb-3"><label>Product Name</label><input type="text" id="p_name" class="form-control" required></div>
+                        <div class="mb-3"><label>Description</label><textarea id="p_desc" class="form-control"></textarea></div>
+                        <button type="submit" class="btn btn-success w-100">Create Product</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="historyModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">⛓️ Blockchain History</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="history-content">
+                    <p>Loading chain data...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const username = localStorage.getItem('username');
+        if (!username) window.location.href = "login.html"; 
+        document.getElementById('username-display').innerText = username;
+
+        // LOAD PRODUCTS
+        function loadProducts() {
+            fetch('http://127.0.0.1:5001/products')
+                .then(res => res.json())
+                .then(products => {
+                    const list = document.getElementById('product-list');
+                    list.innerHTML = ""; 
+                    products.forEach(p => {
+                        const qrImage = p.qr_code ? `http://127.0.0.1:5001/static/qrcodes/${p.qr_code}` : "https://via.placeholder.com/150";
+                        const badgeColor = p.status === "Shipped" ? "bg-warning text-dark" : "bg-success";
+                        
+                        list.innerHTML += `
+                        <div class="col-md-4 mb-3">
+                            <div class="card card-product shadow-sm h-100">
+                                <div class="card-body text-center">
+                                    <h5 class="card-title text-primary">${p.name}</h5>
+                                    <p class="text-muted">${p.description}</p>
+                                    <img src="${qrImage}" class="img-fluid border p-2 mb-3" style="width:150px; border-radius:10px;">
+                                    <br>
+                                    <span id="status-${p.id}" class="badge ${badgeColor} mb-3 p-2">${p.status}</span>
+                                    
+                                    <div class="d-grid gap-2">
+                                        <button onclick="shipProduct(${p.id})" class="btn btn-outline-primary btn-sm">🚚 Ship</button>
+                                        <button onclick="showHistory(${p.id})" class="btn btn-dark btn-sm" data-bs-toggle="modal" data-bs-target="#historyModal">📜 Track History</button>
+                                    </div>
+                                    <p class="text-muted small mt-3">ID: ${p.id}</p>
+                                </div>
+                            </div>
+                        </div>`;
+                    });
+                });
+        }
+        loadProducts();
+
+        // SHIP PRODUCT
+        async function shipProduct(id) {
+            if(!confirm("Ship this product?")) return;
+            const res = await fetch('http://127.0.0.1:5001/product/ship', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ product_id: id })
+            });
+            if (res.ok) loadProducts(); // Reload to update status color
+        }
+
+        // CREATE PRODUCT
+        document.getElementById('createProductForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const name = document.getElementById('p_name').value;
+            const desc = document.getElementById('p_desc').value;
+            await fetch('http://127.0.0.1:5001/product/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: name, description: desc })
+            });
+            location.reload();
+        });
+
+        // SHOW HISTORY (Filter Blockchain)
+        async function showHistory(productId) {
+            const container = document.getElementById('history-content');
+            container.innerHTML = "Loading...";
+            
+            const res = await fetch('http://127.0.0.1:5001/chain');
+            const data = await res.json();
+            const chain = data.chain;
+            
+            let html = "";
+            let found = false;
+
+            chain.forEach(block => {
+                block.transactions.forEach(tx => {
+                    if (tx.product_id === productId) {
+                        found = true;
+                        const date = new Date(block.timestamp * 1000).toLocaleString();
+                        html += `
+                            <div class="timeline-item">
+                                <strong>${tx.action}</strong><br>
+                                <small class="text-muted">${date}</small><br>
+                                <span class="badge bg-light text-dark border">By: ${tx.sender}</span>
+                            </div>
+                        `;
+                    }
+                });
+            });
+
+            if (!found) html = "<p>No history found on blockchain yet.</p>";
+            container.innerHTML = html;
+        }
+    </script>
+</body>
+</html>
